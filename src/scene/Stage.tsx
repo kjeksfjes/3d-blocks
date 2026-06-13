@@ -20,7 +20,9 @@ export function Stage({ children }: { children: ReactNode }) {
         shadow-camera-bottom={-16}
       />
 
-      <Physics>
+      {/* "vary" = one physics step per frame matched to frame time, so heavy
+          collapses degrade gracefully instead of spiralling on catch-up steps. */}
+      <Physics timeStep="vary">
         {children}
 
         {/* Ground */}

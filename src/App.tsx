@@ -18,7 +18,7 @@ export default function App() {
     <div className="app">
       <Leva collapsed />
       <Tuning />
-      <Canvas shadows camera={{ position: [11, 7, 14], fov: 50 }}>
+      <Canvas shadows dpr={[1, 1.5]} camera={{ position: [11, 7, 14], fov: 50 }}>
         <color attach="background" args={['#1a1a1f']} />
         <Stage>
           {/* Remounting on key change rebuilds the structure from scratch (reset). */}
