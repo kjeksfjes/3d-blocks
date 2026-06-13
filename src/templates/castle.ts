@@ -2,21 +2,21 @@ import type { InstanceSpec, TemplateSpec, Vec3 } from './types'
 
 // Three block sizes -> three instanced meshes: curtain/keep brick, smaller tower
 // brick (for rounder rings), and a long lintel that bridges the gatehouse.
-const BRICK: Vec3 = [1, 0.5, 0.5]
-const TOWER_BRICK: Vec3 = [0.7, 0.5, 0.5]
-const LINTEL: Vec3 = [4.8, 0.5, 0.5]
-const BH = 0.5 // course height
+const BRICK: Vec3 = [0.5, 0.25, 0.5]
+const TOWER_BRICK: Vec3 = [0.35, 0.25, 0.5]
+const LINTEL: Vec3 = [4.8, 0.25, 0.5]
+const BH = 0.25 // course height
 
 const STONE = ['#8a8f98', '#787d86', '#9aa0a8', '#828893']
 const tone = (n: number) => STONE[((n % STONE.length) + STONE.length) % STONE.length]
 
 // Layout
 const E = 6 // corner-tower centre offset from origin (±E on x and z)
-const WALL_COURSES = 6
+const WALL_COURSES = 12
 const TOWER_RADIUS = 1.2
-const TOWER_COURSES = 9
+const TOWER_COURSES = 18
 const KEEP_HALF = 1.5
-const KEEP_COURSES = 12
+const KEEP_COURSES = 24
 const GATE_HALF = 1.5 // half-width of the gateway opening
 const LINTEL_HALF = 2.5 // half-width cleared for the lintel course (lintel abuts neighbours)
 
