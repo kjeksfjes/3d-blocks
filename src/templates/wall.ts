@@ -1,8 +1,8 @@
 import type { InstanceSpec, TemplateSpec, Vec3 } from './types'
 
-const BRICK: Vec3 = [1, 0.5, 0.5]
-const COLS = 18
-const ROWS = 12
+const BRICK: Vec3 = [0.5, 0.25, 0.5]
+const COLS = 36
+const ROWS = 24
 
 // Three muted brick tones, picked deterministically so colours are stable across resets.
 const TONES = ['#b06a4a', '#c47b54', '#9c5e42']
