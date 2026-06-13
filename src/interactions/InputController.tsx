@@ -15,6 +15,7 @@ const GRAB_MAX_DISTANCE = 200 // ray length for picking a block
  *     point to a cursor-following anchor (rigid, no springiness) while leaving the
  *     block free to rotate, so it dangles/swings under gravity. Release -> THROW.
  *   - quick tap on empty space        -> SHOOT
+ *   - Shift + tap (anywhere)          -> SHOOT (skips grab, so you can fire at a block)
  *   - drag on empty space             -> ORBIT (OrbitControls)
  */
 export function InputController() {
@@ -80,6 +81,9 @@ export function InputController() {
       if (e.button !== 0) return
       down.current = { x: e.clientX, y: e.clientY, t: performance.now() }
       startedOnBlock.current = false
+
+      // Shift skips the grab so a click always shoots — even when aiming at a block.
+      if (e.shiftKey) return
 
       setNdc(e)
       raycaster.setFromCamera(ndc.current, camera)
