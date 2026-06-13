@@ -1,52 +1,149 @@
-import type { BlockSpec, TemplateSpec, Vec3 } from './types'
+import type { InstanceSpec, TemplateSpec, Vec3 } from './types'
 
+// Three block sizes -> three instanced meshes: curtain/keep brick, smaller tower
+// brick (for rounder rings), and a long lintel that bridges the gatehouse.
 const BRICK: Vec3 = [1, 0.5, 0.5]
-const SPAN = 7 // bricks along each wall
-const COURSES = 4 // wall height in courses
-const TONES = ['#8a8f98', '#787d86', '#9aa0a8']
+const TOWER_BRICK: Vec3 = [0.7, 0.5, 0.5]
+const LINTEL: Vec3 = [4.8, 0.5, 0.5]
+const BH = 0.5 // course height
 
-const bw = BRICK[0]
-const bh = BRICK[1]
-const half = ((SPAN - 1) / 2) * bw // wall centerlines sit at ±half
+const STONE = ['#8a8f98', '#787d86', '#9aa0a8', '#828893']
+const tone = (n: number) => STONE[((n % STONE.length) + STONE.length) % STONE.length]
 
-const tone = (n: number) => TONES[n % TONES.length]
+// Layout
+const E = 6 // corner-tower centre offset from origin (±E on x and z)
+const WALL_COURSES = 6
+const TOWER_RADIUS = 1.2
+const TOWER_COURSES = 9
+const KEEP_HALF = 1.5
+const KEEP_COURSES = 12
+const GATE_HALF = 1.5 // half-width of the gateway opening
+const LINTEL_HALF = 2.5 // half-width cleared for the lintel course (lintel abuts neighbours)
 
-// A square enclosure: front/back walls run along X, side walls along Z (rotated
-// 90°). Side walls are inset by one brick so corners don't overlap. The top
-// course is crenellated (every other merlon removed).
+// Corner-tower centres; wall bricks landing within WALL_TRIM of one are dropped
+// so curtain walls never overlap a tower ring.
+const TOWER_CENTERS: [number, number][] = [
+  [-E, -E],
+  [E, -E],
+  [-E, E],
+  [E, E],
+]
+const WALL_TRIM = TOWER_RADIUS + 0.5
+
+type Axis = 'x' | 'z'
+
 export const castle: TemplateSpec = {
   id: 'castle',
   name: 'Castle',
-  build(): BlockSpec[] {
-    const blocks: BlockSpec[] = []
+  build(): InstanceSpec[] {
+    const blocks: InstanceSpec[] = []
 
-    for (let c = 0; c < COURSES; c++) {
-      const y = bh / 2 + c * bh
-      const top = c === COURSES - 1
-
-      // Front & back walls (run along X), full span.
-      for (let i = 0; i < SPAN; i++) {
-        if (top && i % 2 === 1) continue // crenellation gap
-        const x = (i - (SPAN - 1) / 2) * bw
-        for (const z of [half, -half]) {
-          blocks.push({ position: [x, y, z], size: BRICK, color: tone(i + c) })
-        }
-      }
-
-      // Side walls (run along Z, rotated), inset by one brick to clear corners.
-      for (let j = 1; j < SPAN - 1; j++) {
-        if (top && j % 2 === 1) continue
-        const z = (j - (SPAN - 1) / 2) * bw
-        for (const x of [half, -half]) {
+    // A round tower: bricks laid in rings, running-bond rotated each course,
+    // crenellated on top. Each brick's depth points radially outward.
+    const roundTower = (cx: number, cz: number) => {
+      const [tw] = TOWER_BRICK
+      const circ = 2 * Math.PI * TOWER_RADIUS
+      const count = Math.max(8, Math.floor(circ / (tw * 1.15)))
+      const step = (2 * Math.PI) / count
+      for (let c = 0; c < TOWER_COURSES; c++) {
+        const y = BH / 2 + c * BH
+        const top = c === TOWER_COURSES - 1
+        const angOffset = c % 2 === 0 ? 0 : step / 2
+        for (let k = 0; k < count; k++) {
+          if (top && k % 2 === 1) continue // crenellation
+          const ang = k * step + angOffset
           blocks.push({
-            position: [x, y, z],
-            rotation: [0, Math.PI / 2, 0],
-            size: BRICK,
-            color: tone(j + c),
+            position: [cx + Math.cos(ang) * TOWER_RADIUS, y, cz + Math.sin(ang) * TOWER_RADIUS],
+            rotation: [0, Math.PI / 2 - ang, 0],
+            size: TOWER_BRICK,
+            color: tone(c + k),
           })
         }
       }
     }
+
+    // A straight curtain wall running along `axis`, at the perpendicular
+    // coordinate `fixed`, spanning [from, to]. Optional central gateway + lintel.
+    const curtain = (axis: Axis, fixed: number, from: number, to: number, gate = false) => {
+      const [bw] = BRICK
+      const span = to - from
+      const n = Math.max(1, Math.floor(span / bw))
+      const start = from + (span - n * bw) / 2 + bw / 2
+      const rot: Vec3 = axis === 'x' ? [0, 0, 0] : [0, Math.PI / 2, 0]
+      const gateCourses = WALL_COURSES - 2
+
+      for (let c = 0; c < WALL_COURSES; c++) {
+        const y = BH / 2 + c * BH
+        const top = c === WALL_COURSES - 1
+        const offset = c % 2 === 0 ? 0 : bw / 2
+        const lintelCourse = gate && c === gateCourses
+
+        for (let i = 0; i < n; i++) {
+          const along = start + i * bw + offset
+          if (gate && c < gateCourses && Math.abs(along) < GATE_HALF) continue // doorway
+          if (lintelCourse && Math.abs(along) < LINTEL_HALF) continue // clear for lintel
+          if (top && i % 2 === 1) continue // crenellation
+          const px = axis === 'x' ? along : fixed
+          const pz = axis === 'x' ? fixed : along
+          if (TOWER_CENTERS.some(([tx, tz]) => Math.hypot(px - tx, pz - tz) < WALL_TRIM)) {
+            continue // would overlap a corner tower
+          }
+          blocks.push({ position: [px, y, pz], rotation: rot, size: BRICK, color: tone(c + i) })
+        }
+
+        if (lintelCourse) {
+          const position: Vec3 = axis === 'x' ? [0, y, fixed] : [fixed, y, 0]
+          blocks.push({ position, rotation: rot, size: LINTEL, color: tone(c) })
+        }
+      }
+    }
+
+    // A square keep (central donjon): four crenellated walls, taller than the curtain.
+    const keep = () => {
+      const [bw] = BRICK
+      const n = Math.max(1, Math.floor((2 * KEEP_HALF) / bw))
+      const start = -KEEP_HALF + (2 * KEEP_HALF - n * bw) / 2 + bw / 2
+      for (let c = 0; c < KEEP_COURSES; c++) {
+        const y = BH / 2 + c * BH
+        const top = c === KEEP_COURSES - 1
+        const offset = c % 2 === 0 ? 0 : bw / 2
+        for (let i = 0; i < n; i++) {
+          const a = start + i * bw + offset
+          if (top && i % 2 === 1) continue
+          // front/back walls (along x at z = ±KEEP_HALF)
+          for (const z of [KEEP_HALF, -KEEP_HALF]) {
+            blocks.push({ position: [a, y, z], size: BRICK, color: tone(c + i + 1) })
+          }
+          // side walls (along z at x = ±KEEP_HALF), inset by one brick to clear corners
+          if (a > start && a < start + (n - 1) * bw) {
+            for (const x of [KEEP_HALF, -KEEP_HALF]) {
+              blocks.push({
+                position: [x, y, a],
+                rotation: [0, Math.PI / 2, 0],
+                size: BRICK,
+                color: tone(c + i + 1),
+              })
+            }
+          }
+        }
+      }
+    }
+
+    // Corner towers
+    roundTower(-E, -E)
+    roundTower(E, -E)
+    roundTower(-E, E)
+    roundTower(E, E)
+
+    // Curtain walls inset between the towers; gateway on the front (+z) wall.
+    const inset = TOWER_RADIUS + 0.3
+    curtain('x', E, -E + inset, E - inset, true)
+    curtain('x', -E, -E + inset, E - inset)
+    curtain('z', E, -E + inset, E - inset)
+    curtain('z', -E, -E + inset, E - inset)
+
+    keep()
+
     return blocks
   },
 }

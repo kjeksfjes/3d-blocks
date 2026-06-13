@@ -1,8 +1,8 @@
 export type Vec3 = [number, number, number]
 
-/** A single block in a structure. Positions are world-space; the structure
- *  is responsible for placing blocks so they rest on each other / the ground. */
-export interface BlockSpec {
+/** One block instance within a structure. Each block carries its own box size;
+ *  the renderer groups blocks of equal size into shared instanced meshes. */
+export interface InstanceSpec {
   position: Vec3
   /** Euler rotation in radians. Defaults to no rotation. */
   rotation?: Vec3
@@ -14,6 +14,6 @@ export interface BlockSpec {
 export interface TemplateSpec {
   id: string
   name: string
-  /** Pure function returning the blocks to spawn. Called fresh on each (re)mount. */
-  build: () => BlockSpec[]
+  /** Pure function returning the block instances. Called fresh on each (re)mount. */
+  build: () => InstanceSpec[]
 }

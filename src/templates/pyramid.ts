@@ -1,7 +1,7 @@
-import type { BlockSpec, TemplateSpec, Vec3 } from './types'
+import type { InstanceSpec, TemplateSpec, Vec3 } from './types'
 
 const SIZE: Vec3 = [1, 0.6, 1]
-const BASE = 5 // blocks per side at the bottom course
+const BASE = 9 // blocks per side at the bottom course
 const TONES = ['#c9b79c', '#bda77f', '#d6c6a8']
 
 // A stepped (ziggurat-style) pyramid: each course is a solid square grid one
@@ -9,9 +9,9 @@ const TONES = ['#c9b79c', '#bda77f', '#d6c6a8']
 export const pyramid: TemplateSpec = {
   id: 'pyramid',
   name: 'Pyramid',
-  build(): BlockSpec[] {
+  build(): InstanceSpec[] {
     const [sx, sy, sz] = SIZE
-    const blocks: BlockSpec[] = []
+    const blocks: InstanceSpec[] = []
 
     for (let layer = 0; layer < BASE; layer++) {
       const n = BASE - layer
