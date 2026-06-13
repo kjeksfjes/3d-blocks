@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Local tooling (kept out of git deliberately)
+.beads/
+.claude/
+
+# OS / editor cruft
+.DS_Store
+*.log
