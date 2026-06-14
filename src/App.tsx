@@ -3,8 +3,10 @@ import { Leva } from 'leva'
 import { Stage } from './scene/Stage'
 import { Structure } from './scene/Structure'
 import { Projectiles } from './scene/Projectiles'
+import { AwakeMeter } from './scene/AwakeMeter'
 import { InputController } from './interactions/InputController'
 import { HUD } from './ui/HUD'
+import { PerfReadout } from './ui/PerfReadout'
 import { Tuning } from './ui/Tuning'
 import { useStore } from './state/store'
 import { templateMap } from './templates'
@@ -25,9 +27,11 @@ export default function App() {
           <Structure key={`${activeTemplateId}-${resetNonce}`} template={template} />
           <Projectiles />
           <InputController />
+          <AwakeMeter />
         </Stage>
       </Canvas>
       <HUD />
+      <PerfReadout />
     </div>
   )
 }

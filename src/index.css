@@ -40,6 +40,20 @@ body {
   user-select: none;
 }
 
+.perf {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(232, 232, 238, 0.7);
+  background: rgba(20, 20, 26, 0.5);
+  padding: 4px 8px;
+  border-radius: 7px;
+  pointer-events: none;
+  user-select: none;
+}
+
 .hud__group {
   display: flex;
   gap: 6px;

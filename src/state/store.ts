@@ -44,10 +44,13 @@ interface AppState {
   resetNonce: number
   projectiles: Projectile[]
   tuning: Tuning
+  /** Awake (non-sleeping) rigid-body count, sampled a few times/sec for the readout. */
+  awakeBodies: number
   setTemplate: (id: string) => void
   reset: () => void
   fire: (position: Vec3, velocity: Vec3) => void
   setTuning: (partial: Partial<Tuning>) => void
+  setAwakeBodies: (n: number) => void
 }
 
 let nextProjectileId = 0
@@ -57,6 +60,7 @@ export const useStore = create<AppState>((set) => ({
   resetNonce: 0,
   projectiles: [],
   tuning: DEFAULT_TUNING,
+  awakeBodies: 0,
   setTemplate: (id) => set({ activeTemplateId: id, resetNonce: 0, projectiles: [] }),
   reset: () => set((s) => ({ resetNonce: s.resetNonce + 1, projectiles: [] })),
   fire: (position, velocity) =>
@@ -73,4 +77,5 @@ export const useStore = create<AppState>((set) => ({
       return { projectiles: next.length > MAX_PROJECTILES ? next.slice(-MAX_PROJECTILES) : next }
     }),
   setTuning: (partial) => set((s) => ({ tuning: { ...s.tuning, ...partial } })),
+  setAwakeBodies: (n) => set({ awakeBodies: n }),
 }))
