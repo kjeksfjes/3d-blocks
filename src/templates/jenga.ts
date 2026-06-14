@@ -8,6 +8,8 @@ const BASE = '#c2a06a' // wood; per-block variation is added by the renderer
 export const jenga: TemplateSpec = {
   id: 'jenga',
   name: 'Jenga',
+  // Solid feel: grippy, no bounce, damping to settle quickly without micro-jitter.
+  physics: { friction: 1.45, restitution: 0, linearDamping: 1, angularDamping: 0.2 },
   build(): InstanceSpec[] {
     const [, , w] = PLANK
     const h = PLANK[1]
