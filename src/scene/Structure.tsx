@@ -10,6 +10,19 @@ import type { InstanceSpec, SpawnMode, TemplateSpec, Vec3 } from '../templates/t
 import { useStore } from '../state/store'
 
 const ZERO = { x: 0, y: 0, z: 0 }
+
+// Per-block colour variation around each material's base tone. Maxima are scaled by
+// the 0–1 `colorVariation` setting; the random jitter is deterministic (hashed from
+// the block index) so it looks random but is stable across resets.
+const MAX_HUE_JITTER = 0.024
+const MAX_SAT_JITTER = 0.07
+const MAX_LIGHT_JITTER = 0.17
+const MAX_PALETTE_STEP = 0.08 // discrete lightness step for the 3-tone 'palette' look
+const hash = (n: number) => {
+  const x = Math.sin(n * 12.9898) * 43758.5453
+  return x - Math.floor(x)
+}
+const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v)
 const SETTLE_GUARD_FRAMES = 10 // frames to hold a structure pinned asleep on spawn
 const BAKE_MIN_FRAMES = 8 // don't capture a bake before the structure has had a chance to move
 const BAKE_MAX_FRAMES = 600 // hard cap (~10s) so a never-quite-sleeping body still gets baked
@@ -96,14 +109,33 @@ function InstanceGroup({
     })
   }, [group])
 
-  // Per-instance colours (the instanced mesh shares one material).
+  const colorMode = useStore((s) => s.colorMode)
+  const colorVariation = useStore((s) => s.colorVariation)
+
+  // Per-instance colours (the instanced mesh shares one material). Re-runs live when
+  // the colour mode/variation changes.
   useLayoutEffect(() => {
     const mesh = meshRef.current
     if (!mesh) return
     const color = new Color()
-    group.specs.forEach((s, i) => mesh.setColorAt(i, color.set(s.color ?? '#d98c5f')))
+    const hsl = { h: 0, s: 0, l: 0 }
+    group.specs.forEach((s, i) => {
+      color.set(s.color ?? '#d98c5f')
+      if (colorMode === 'random') {
+        color.getHSL(hsl)
+        color.setHSL(
+          hsl.h + (hash(i + 0.3) - 0.5) * MAX_HUE_JITTER * colorVariation,
+          clamp01(hsl.s + (hash(i + 1.7) - 0.5) * MAX_SAT_JITTER * colorVariation),
+          clamp01(hsl.l + (hash(i + 2.9) - 0.5) * MAX_LIGHT_JITTER * colorVariation),
+        )
+      } else if (colorMode === 'palette') {
+        color.getHSL(hsl)
+        color.setHSL(hsl.h, hsl.s, clamp01(hsl.l + ((i % 3) - 1) * MAX_PALETTE_STEP * colorVariation))
+      }
+      mesh.setColorAt(i, color)
+    })
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
-  }, [group])
+  }, [group, colorMode, colorVariation])
 
   useFrame(() => {
     const bodies = bodiesRef.current

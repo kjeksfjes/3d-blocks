@@ -7,8 +7,9 @@ const TOWER_BRICK: Vec3 = [0.35, 0.25, 0.5]
 const LINTEL: Vec3 = [4.8, 0.25, 0.5]
 const BH = 0.25 // course height
 
-const STONE = ['#8a8f98', '#787d86', '#9aa0a8', '#828893']
-const tone = (n: number) => STONE[((n % STONE.length) + STONE.length) % STONE.length]
+// Single stone base; per-block variation is added by the renderer (tone ignores its arg).
+const BASE = '#888d96'
+const tone = (_n: number) => BASE
 
 // Layout
 const E = 6 // corner-tower centre offset from origin (±E on x and z)

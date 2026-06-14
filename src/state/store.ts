@@ -30,6 +30,8 @@ export const DEFAULT_TUNING: Tuning = {
   blockRestitution: 0.1,
 }
 
+export type ColorMode = 'none' | 'random' | 'palette'
+
 export interface Projectile {
   id: number
   position: Vec3
@@ -44,12 +46,16 @@ interface AppState {
   resetNonce: number
   projectiles: Projectile[]
   tuning: Tuning
+  /** How per-block colour variation is applied, and its strength (0–1). */
+  colorMode: ColorMode
+  colorVariation: number
   /** Awake (non-sleeping) rigid-body count, sampled a few times/sec for the readout. */
   awakeBodies: number
   setTemplate: (id: string) => void
   reset: () => void
   fire: (position: Vec3, velocity: Vec3) => void
   setTuning: (partial: Partial<Tuning>) => void
+  setColor: (mode: ColorMode, variation: number) => void
   setAwakeBodies: (n: number) => void
 }
 
@@ -60,6 +66,8 @@ export const useStore = create<AppState>((set) => ({
   resetNonce: 0,
   projectiles: [],
   tuning: DEFAULT_TUNING,
+  colorMode: 'random',
+  colorVariation: 0.5,
   awakeBodies: 0,
   setTemplate: (id) => set({ activeTemplateId: id, resetNonce: 0, projectiles: [] }),
   reset: () => set((s) => ({ resetNonce: s.resetNonce + 1, projectiles: [] })),
@@ -77,5 +85,6 @@ export const useStore = create<AppState>((set) => ({
       return { projectiles: next.length > MAX_PROJECTILES ? next.slice(-MAX_PROJECTILES) : next }
     }),
   setTuning: (partial) => set((s) => ({ tuning: { ...s.tuning, ...partial } })),
+  setColor: (mode, variation) => set({ colorMode: mode, colorVariation: variation }),
   setAwakeBodies: (n) => set({ awakeBodies: n }),
 }))

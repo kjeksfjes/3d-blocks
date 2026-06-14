@@ -4,8 +4,7 @@ const BRICK: Vec3 = [0.5, 0.25, 0.5]
 const COLS = 36
 const ROWS = 24
 
-// Three muted brick tones, picked deterministically so colours are stable across resets.
-const TONES = ['#b06a4a', '#c47b54', '#9c5e42']
+const BASE = '#b56b4a' // brick; per-block variation is added by the renderer
 
 export const wall: TemplateSpec = {
   id: 'wall',
@@ -22,7 +21,7 @@ export const wall: TemplateSpec = {
         blocks.push({
           position: [x0 + c * bw + offset, bh / 2 + r * bh, 0],
           size: BRICK,
-          color: TONES[(r + c) % TONES.length],
+          color: BASE,
         })
       }
     }

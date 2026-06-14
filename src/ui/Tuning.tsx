@@ -1,11 +1,17 @@
 import { useEffect } from 'react'
 import { useControls } from 'leva'
-import { DEFAULT_TUNING, useStore } from '../state/store'
+import { DEFAULT_TUNING, useStore, type ColorMode } from '../state/store'
 
 /** leva panel -> store. Control keys match the Tuning fields so they spread in
  *  directly. Returns null; the panel itself is injected by leva. */
 export function Tuning() {
   const setTuning = useStore((s) => s.setTuning)
+  const setColor = useStore((s) => s.setColor)
+
+  const color = useControls('Color', {
+    mode: { value: 'random', options: ['random', 'none', 'palette'] },
+    variation: { value: 0.5, min: 0, max: 1, step: 0.05 },
+  })
 
   const projectile = useControls('Projectile', {
     shootSpeed: { value: DEFAULT_TUNING.shootSpeed, min: 5, max: 60, step: 1 },
@@ -27,6 +33,10 @@ export function Tuning() {
   useEffect(() => {
     setTuning({ ...projectile, ...grab, ...blocks })
   }, [projectile, grab, blocks, setTuning])
+
+  useEffect(() => {
+    setColor(color.mode as ColorMode, color.variation)
+  }, [color, setColor])
 
   return null
 }

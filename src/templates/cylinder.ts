@@ -6,7 +6,7 @@ import type { InstanceSpec, TemplateSpec, Vec3 } from './types'
 const BRICK: Vec3 = [0.4, 0.3, 0.5] // tangential width, height, radial depth
 const RADIUS = 5
 const COURSES = 43 // ~3,000 bricks at this radius
-const TONES = ['#b8a888', '#a89878', '#c8b898', '#ad9d7d']
+const BASE = '#b8a888' // sandstone; per-block variation is added by the renderer
 
 export const cylinder: TemplateSpec = {
   id: 'cylinder',
@@ -30,7 +30,7 @@ export const cylinder: TemplateSpec = {
           position: [Math.cos(ang) * RADIUS, y, Math.sin(ang) * RADIUS],
           rotation: [0, Math.PI / 2 - ang, 0],
           size: BRICK,
-          color: TONES[(c + k) % TONES.length],
+          color: BASE,
         })
       }
     }

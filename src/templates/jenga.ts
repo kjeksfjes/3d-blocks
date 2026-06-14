@@ -3,7 +3,7 @@ import type { InstanceSpec, TemplateSpec, Vec3 } from './types'
 // Jenga-style tower: each layer is 3 planks; alternate layers rotate 90°.
 const PLANK: Vec3 = [1.5, 0.3, 0.5]
 const LAYERS = 18
-const TONES = ['#caa472', '#b98e58', '#d8b585']
+const BASE = '#c2a06a' // wood; per-block variation is added by the renderer
 
 export const jenga: TemplateSpec = {
   id: 'jenga',
@@ -23,7 +23,7 @@ export const jenga: TemplateSpec = {
           position: rotated ? [along, y, 0] : [0, y, along],
           rotation: rotated ? [0, Math.PI / 2, 0] : [0, 0, 0],
           size: PLANK,
-          color: TONES[(layer + i + 1) % TONES.length],
+          color: BASE,
         })
       }
     }
