@@ -123,6 +123,7 @@ export function InputController() {
       anchor.current = anchorBody
       grabbed.current = body
       startedOnBlock.current = true
+      body.wakeUp() // bricks spawn asleep; ensure the grabbed one is active
       prevAngularDamping.current = body.angularDamping()
       body.setAngularDamping(useStore.getState().tuning.heldAngularDamping)
 

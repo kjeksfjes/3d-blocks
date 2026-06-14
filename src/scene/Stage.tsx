@@ -20,11 +20,11 @@ export function Stage({ children }: { children: ReactNode }) {
         shadow-camera-bottom={-16}
       />
 
-      {/* Fixed timestep: stable on spawn (a long first frame can't integrate one
-          huge gravity step). SIMD keeps the solver fast enough to not need "vary".
-          More solver iterations + a sub-meter lengthUnit keep tall stacks of small
-          bricks rigid on spawn instead of settling/sinking under their own weight. */}
-      <Physics numSolverIterations={8} lengthUnit={0.5}>
+      {/* "vary" runs one physics step per frame, so heavy collapses degrade to slight
+          slow-motion instead of spiralling on fixed-timestep catch-up steps. The
+          spawn lurch this could cause is absorbed by spawning structures asleep
+          (see Structure); SIMD keeps the solver fast. */}
+      <Physics timeStep="vary">
         {children}
 
         {/* Ground */}
