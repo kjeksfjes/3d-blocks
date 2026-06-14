@@ -178,6 +178,7 @@ function InstanceGroup({
           return { px: t.x, py: t.y, pz: t.z, qx: r.x, qy: r.y, qz: r.z, qw: r.w }
         }),
       )
+      // Restore normal (zero) damping so this first instance behaves like later spawns.
       for (const b of bodies) {
         b!.setLinearDamping(0)
         b!.setAngularDamping(0)

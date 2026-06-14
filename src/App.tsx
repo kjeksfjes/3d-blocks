@@ -18,7 +18,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <Leva collapsed />
+      <Leva collapsed theme={{ sizes: { rootWidth: '340px' } }} />
       <Tuning />
       <Canvas shadows dpr={[1, 1.5]} camera={{ position: [11, 7, 14], fov: 50 }}>
         <color attach="background" args={['#1a1a1f']} />

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei'
 import { Physics, RigidBody } from '@react-three/rapier'
+import cityEnv from '@pmndrs/assets/hdri/city.exr'
 
 /** Lighting, ground, environment and camera controls. Wraps the dynamic
  *  structure (passed as children) in the physics world alongside the ground. */
@@ -20,10 +21,10 @@ export function Stage({ children }: { children: ReactNode }) {
         shadow-camera-bottom={-16}
       />
 
-      {/* "vary" runs one physics step per frame, so heavy collapses degrade to slight
-          slow-motion instead of spiralling on fixed-timestep catch-up steps. The
-          spawn lurch this could cause is absorbed by spawning structures asleep
-          (see Structure); SIMD keeps the solver fast. */}
+      {/* "vary" = one physics step per frame sized to frame time. Big collapses stay
+          responsive (slow-motion) instead of spiralling on fixed-timestep catch-up
+          sub-steps. Keeping the frame rate high (no heavy post-processing) keeps the
+          steps small enough that marginal structures (cylinder/castle) stay stable. */}
       <Physics timeStep="vary">
         {children}
 
@@ -37,7 +38,8 @@ export function Stage({ children }: { children: ReactNode }) {
       </Physics>
 
       <ContactShadows position={[0, 0.01, 0]} opacity={0.4} scale={50} blur={2} far={12} />
-      <Environment preset="city" />
+      {/* Same 'city' HDRI as drei's preset, but bundled locally so it works offline. */}
+      <Environment files={cityEnv} />
       <OrbitControls makeDefault target={[0, 1.5, 0]} maxPolarAngle={Math.PI / 2.05} />
     </>
   )
