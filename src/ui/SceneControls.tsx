@@ -21,7 +21,7 @@ function SceneToggles({ template }: { template: TemplateSpec }) {
   const schema = Object.fromEntries(
     (template.toggles ?? []).map((t) => [t.key, { value: t.default, label: t.label }]),
   )
-  const values = useControls(`Scene: ${template.name}`, schema, { order: 4 })
+  const values = useControls(`Scene: ${template.name}`, schema, { order: 11 })
   useEffect(() => {
     setSceneToggles(values as Record<string, boolean>)
   }, [values, setSceneToggles])

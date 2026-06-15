@@ -18,6 +18,7 @@ export default function App() {
   const activeTemplateId = useStore((s) => s.activeTemplateId)
   const resetNonce = useStore((s) => s.resetNonce)
   const sceneToggles = useStore((s) => s.sceneToggles)
+  const destructionMode = useStore((s) => s.destructionMode)
   const template = templateMap[activeTemplateId]
 
   // Effective toggles for this scene: stored value or the template's default, limited
@@ -38,7 +39,12 @@ export default function App() {
         <color attach="background" args={['#1a1a1f']} />
         <Stage>
           {/* Remounting on key change rebuilds the structure from scratch (reset). */}
-          <Structure key={`${activeTemplateId}-${resetNonce}-${togglesKey}`} template={template} toggles={toggles} />
+          <Structure
+            key={`${activeTemplateId}-${resetNonce}-${togglesKey}-${destructionMode}`}
+            template={template}
+            toggles={toggles}
+            mode={destructionMode}
+          />
           <Projectiles />
           <InputController />
           <AwakeMeter />

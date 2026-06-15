@@ -31,7 +31,7 @@ function Inner({ template }: { template: TemplateSpec }) {
       angularDamping: { value: initial.angularDamping, min: 0, max: 5, step: 0.05 },
       'Reset to defaults': button(() => setRef.current?.(defaults)),
     }),
-    { order: 3 },
+    { order: 10 },
   )
   setRef.current = set
 

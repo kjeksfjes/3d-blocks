@@ -63,6 +63,23 @@ export interface Projectile {
   density: number
 }
 
+/** A registered projectile impact, consumed by the destruction modes that react to hits.
+ *  `id` increments so consumers can process each impact once. */
+export interface Impact {
+  id: number
+  position: Vec3
+  velocity: Vec3
+}
+
+/**
+ * How a structure comes apart when hit:
+ * - 'loose'  — plain dynamic bricks (default); realistic but a hit ripples through it.
+ * - 'static' — bricks are fixed; only the struck region turns dynamic (localized shatter).
+ * - 'welded' — bricks are bonded to their neighbours so the structure holds together like
+ *   a solid; a hit breaks only the nearby bonds, so it fractures locally and topples whole.
+ */
+export type DestructionMode = 'loose' | 'static' | 'welded'
+
 interface AppState {
   activeTemplateId: string
   /** Bumped to force the structure to remount (= reset to its initial layout). */
@@ -78,6 +95,10 @@ interface AppState {
   livePhysicsByScene: Record<string, LivePhysics>
   /** Current values of the active scene's on/off toggles (keyed by toggle key). */
   sceneToggles: Record<string, boolean>
+  /** How structures come apart when hit (see DestructionMode). */
+  destructionMode: DestructionMode
+  /** The latest projectile impact (consumed by the static/welded modes); null if none. */
+  lastImpact: Impact | null
   setTemplate: (id: string) => void
   reset: () => void
   fire: (position: Vec3, velocity: Vec3) => void
@@ -86,6 +107,8 @@ interface AppState {
   setAwakeBodies: (n: number) => void
   setSceneLivePhysics: (templateId: string, value: LivePhysics) => void
   setSceneToggles: (next: Record<string, boolean>) => void
+  setDestructionMode: (mode: DestructionMode) => void
+  registerImpact: (position: Vec3, velocity: Vec3) => void
 }
 
 let nextProjectileId = 0
@@ -100,6 +123,8 @@ export const useStore = create<AppState>((set) => ({
   awakeBodies: 0,
   livePhysicsByScene: {},
   sceneToggles: {},
+  destructionMode: 'loose',
+  lastImpact: null,
   setTemplate: (id) => set({ activeTemplateId: id, resetNonce: 0, projectiles: [] }),
   reset: () => set((s) => ({ resetNonce: s.resetNonce + 1, projectiles: [] })),
   fire: (position, velocity) =>
@@ -121,4 +146,7 @@ export const useStore = create<AppState>((set) => ({
   setSceneLivePhysics: (templateId, value) =>
     set((s) => ({ livePhysicsByScene: { ...s.livePhysicsByScene, [templateId]: value } })),
   setSceneToggles: (next) => set({ sceneToggles: next }),
+  setDestructionMode: (mode) => set({ destructionMode: mode }),
+  registerImpact: (position, velocity) =>
+    set((s) => ({ lastImpact: { id: (s.lastImpact?.id ?? 0) + 1, position, velocity } })),
 }))
