@@ -109,6 +109,23 @@ export function ImpactSampler() {
       const sp = Math.hypot(v.x, v.y, v.z)
 
       let r = map.get(h)
+
+      // A grabbed brick is driven by the cursor, not colliding — keep its velocity
+      // baseline current (so there's no false spike on release) but never sound it.
+      if (audioManager.isGrabbed(h)) {
+        if (r) {
+          r.vx = v.x
+          r.vy = v.y
+          r.vz = v.z
+          r.peak = 0
+          r.quiet = 0
+          r.seen = g
+        } else {
+          map.set(h, { vx: v.x, vy: v.y, vz: v.z, peak: 0, quiet: 0, seen: g })
+        }
+        return
+      }
+
       if (!r) {
         // First sighting: establish a baseline, no detection yet.
         map.set(h, { vx: v.x, vy: v.y, vz: v.z, peak: sp, quiet: sp < REST_SPEED ? 1 : 0, seen: g })

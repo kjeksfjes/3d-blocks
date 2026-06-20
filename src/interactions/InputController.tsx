@@ -81,6 +81,7 @@ export function InputController() {
         body.setLinvel({ x: tmp.current.x, y: tmp.current.y, z: tmp.current.z }, true)
       }
       grabbed.current = null
+      audioManager.setGrabbed(null) // resume impact audio for the released brick
       if (controls) controls.enabled = true
     }
 
@@ -130,6 +131,7 @@ export function InputController() {
       )
       anchor.current = anchorBody
       grabbed.current = body
+      audioManager.setGrabbed(body.handle) // mute impact audio while it follows the cursor
       startedOnBlock.current = true
       body.wakeUp() // bricks spawn asleep; ensure the grabbed one is active
       prevAngularDamping.current = body.angularDamping()

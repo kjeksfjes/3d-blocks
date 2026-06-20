@@ -44,6 +44,9 @@ class AudioManager {
   // Rigid-body handles that should sound metallic (the steel balls); everything
   // else the sampler treats as brick.
   private readonly projectiles = new Set<number>()
+  // The currently grabbed body, if any. The sampler ignores it so dragging it
+  // around (its velocity tracks the cursor) doesn't read as a stream of collisions.
+  private grabbed: number | null = null
 
   /** Create the context + master chain on first call; resume it if suspended.
    *  Safe to call on every gesture — it no-ops once running. */
@@ -163,6 +166,14 @@ class AudioManager {
   }
   isProjectile(handle: number) {
     return this.projectiles.has(handle)
+  }
+
+  /** Mark/clear the body currently held by the cursor (null to clear). */
+  setGrabbed(handle: number | null) {
+    this.grabbed = handle
+  }
+  isGrabbed(handle: number) {
+    return this.grabbed === handle
   }
 
   setVolume(v: number) {
