@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useRapier, type RapierRigidBody } from '@react-three/rapier'
 import { Plane, Quaternion, Vector2, Vector3 } from 'three'
 import { useStore } from '../state/store'
+import { audioManager } from '../audio/AudioManager'
 
 const SPAWN_OFFSET = 1.2 // spawn ahead of the camera lens
 const DRAG_THRESHOLD = 6 // px; beyond this an empty-space gesture is an orbit, not a shot
@@ -85,6 +86,7 @@ export function InputController() {
 
     const onDown = (e: PointerEvent) => {
       if (e.button !== 0) return
+      audioManager.start() // unlock/resume audio on the first user gesture
       down.current = { x: e.clientX, y: e.clientY, t: performance.now() }
       startedOnBlock.current = false
 
@@ -236,6 +238,7 @@ export function InputController() {
       if (e.key !== 'b' && e.key !== 'B') return
       const t = e.target as HTMLElement | null
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return // don't fire while typing
+      audioManager.start() // unlock/resume audio on the first user gesture
       explode()
     }
 

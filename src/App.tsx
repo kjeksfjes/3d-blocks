@@ -5,12 +5,14 @@ import { Stage } from './scene/Stage'
 import { Structure } from './scene/Structure'
 import { Projectiles } from './scene/Projectiles'
 import { AwakeMeter } from './scene/AwakeMeter'
+import { ImpactSampler } from './scene/ImpactSampler'
 import { InputController } from './interactions/InputController'
 import { HUD } from './ui/HUD'
 import { PerfReadout } from './ui/PerfReadout'
 import { SceneControls } from './ui/SceneControls'
 import { BlockPhysicsControls } from './ui/BlockPhysicsControls'
 import { Tuning } from './ui/Tuning'
+import { SoundControls } from './ui/SoundControls'
 import { useStore } from './state/store'
 import { templateMap } from './templates'
 
@@ -35,6 +37,7 @@ export default function App() {
       <SceneControls />
       <BlockPhysicsControls />
       <Tuning />
+      <SoundControls />
       <Canvas shadows dpr={[1, 1.5]} camera={{ position: [11, 7, 14], fov: 50 }}>
         <color attach="background" args={['#1a1a1f']} />
         <Stage>
@@ -48,6 +51,7 @@ export default function App() {
           <Projectiles />
           <InputController />
           <AwakeMeter />
+          <ImpactSampler />
         </Stage>
       </Canvas>
       <HUD />

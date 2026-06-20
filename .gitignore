@@ -14,3 +14,6 @@ dist/
 # OS / editor cruft
 .DS_Store
 *.log
+
+# Scratch: source audio downloads kept out of the repo
+temp/

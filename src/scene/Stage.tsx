@@ -24,8 +24,13 @@ export function Stage({ children }: { children: ReactNode }) {
       {/* "vary" = one physics step per frame sized to frame time. Big collapses stay
           responsive (slow-motion) instead of spiralling on fixed-timestep catch-up
           sub-steps. Keeping the frame rate high (no heavy post-processing) keeps the
-          steps small enough that marginal structures (cylinder/castle) stay stable. */}
-      <Physics timeStep="vary">
+          steps small enough that marginal structures (cylinder/castle) stay stable.
+
+          numSolverIterations (default 4) raised to 12: a welded structure is a large
+          network of fixed joints, and with few iterations the constraints stay springy
+          so a single hit bows the whole wall. More iterations resolve the network
+          rigidly, so it fractures locally and the rest holds its shape. */}
+      <Physics timeStep="vary" numSolverIterations={12}>
         {children}
 
         {/* Ground */}
