@@ -117,7 +117,9 @@ class AudioManager {
       for (const ext of SAMPLE_EXTS) {
         let res: Response
         try {
-          res = await fetch(`sounds/${slot}.${ext}`)
+          // BASE_URL (always trailing-slashed) keeps this correct when the app is
+          // served from a sub-path, e.g. the /3d-blocks/ GitHub Pages site.
+          res = await fetch(`${import.meta.env.BASE_URL}sounds/${slot}.${ext}`)
         } catch (e) {
           console.warn(`[audio] fetch failed for ${slot}.${ext}`, e)
           continue

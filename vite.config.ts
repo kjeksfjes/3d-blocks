@@ -1,7 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  // Built for a GitHub Pages project site at /<repo>/; dev stays at the root so
+  // `npm run dev` is still plain http://localhost:5173.
+  base: command === 'build' ? '/3d-blocks/' : '/',
   plugins: [react()],
   resolve: {
     alias: {
@@ -10,4 +13,4 @@ export default defineConfig({
       '@dimforge/rapier3d-compat': '@dimforge/rapier3d-simd-compat',
     },
   },
-})
+}))
