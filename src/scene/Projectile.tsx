@@ -46,6 +46,11 @@ export function Projectile({
     <RigidBody
       ref={ref}
       colliders="ball"
+      // Continuous collision detection: physics uses a vary timestep (= frame time),
+      // so a fast ball would otherwise jump past the 0.5m-thick wall between two
+      // discrete checks and never collide — very visible on a phone, whose longer
+      // frames mean longer steps. Only the ball pays the CCD cost, never the bricks.
+      ccd
       position={position}
       linearVelocity={velocity}
       density={density}
