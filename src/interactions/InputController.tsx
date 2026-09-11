@@ -9,6 +9,10 @@ const SPAWN_OFFSET = 1.2 // spawn ahead of the camera lens
 const DRAG_THRESHOLD = 6 // px; beyond this an empty-space gesture is an orbit, not a shot
 const TAP_TIMEOUT = 400 // ms; a slow press is not a shot
 const GRAB_MAX_DISTANCE = 200 // ray length for picking a block
+// Touch only: how long a finger must rest on a block before the gesture promotes
+// from "tap to shoot" to "grab". Long enough that a normal tap never grabs, short
+// enough that holding still feels immediate.
+const TOUCH_HOLD_MS = 180
 // "B" gives every block a launch velocity that points away from its nearby
 // neighbours (summed), so each block repels the ones actually around it in all
 // directions. Neighbours are found via a spatial grid (cell size >= radius).
@@ -24,6 +28,11 @@ const EXPLOSION_CELL = 1.5
  *   - quick tap on empty space        -> SHOOT
  *   - Shift + tap (anywhere)          -> SHOOT (skips grab, so you can fire at a block)
  *   - drag on empty space             -> ORBIT (OrbitControls)
+ *
+ * Touch has no Shift, so a press on a block would leave no way to fire at the
+ * structure. There the grab is deferred instead: a quick tap on a block SHOOTS,
+ * while holding (TOUCH_HOLD_MS) or dragging promotes the same press to a GRAB.
+ * Mouse and pen keep the immediate press-to-grab behaviour.
  */
 export function InputController() {
   const camera = useThree((s) => s.camera)
@@ -42,6 +51,10 @@ export function InputController() {
   const startedOnBlock = useRef(false)
   const prevAngularDamping = useRef(0)
   const down = useRef({ x: 0, y: 0, t: 0 })
+  // Touch: a press on a block whose tap-vs-grab outcome is not decided yet. Holds
+  // the original press point so a promoted grab still anchors where you pressed.
+  const pending = useRef<{ x: number; y: number } | null>(null)
+  const holdTimer = useRef<number | null>(null)
 
   // Scratch objects reused across events/frames.
   const ndc = useRef(new Vector2())
@@ -53,12 +66,21 @@ export function InputController() {
   useEffect(() => {
     const el = gl.domElement
 
-    const setNdc = (e: PointerEvent) => {
+    const setNdc = (x: number, y: number) => {
       const rect = el.getBoundingClientRect()
       ndc.current.set(
-        ((e.clientX - rect.left) / rect.width) * 2 - 1,
-        -((e.clientY - rect.top) / rect.height) * 2 + 1,
+        ((x - rect.left) / rect.width) * 2 - 1,
+        -((y - rect.top) / rect.height) * 2 + 1,
       )
+    }
+
+    /** Clear any undecided touch press (and its hold timer). */
+    const cancelPending = () => {
+      if (holdTimer.current !== null) {
+        clearTimeout(holdTimer.current)
+        holdTimer.current = null
+      }
+      pending.current = null
     }
 
     const release = () => {
@@ -85,24 +107,24 @@ export function InputController() {
       if (controls) controls.enabled = true
     }
 
-    const onDown = (e: PointerEvent) => {
-      if (e.button !== 0) return
-      audioManager.start() // unlock/resume audio on the first user gesture
-      down.current = { x: e.clientX, y: e.clientY, t: performance.now() }
-      startedOnBlock.current = false
-
-      // Shift skips the grab so a click always shoots — even when aiming at a block.
-      if (e.shiftKey) return
-
-      setNdc(e)
+    /** The dynamic body under these client coords, or null. Leaves the world-space
+     *  hit point in `tmp.current`. */
+    const pickBlock = (x: number, y: number) => {
+      setNdc(x, y)
       raycaster.setFromCamera(ndc.current, camera)
       const { origin, direction } = raycaster.ray
       const hit = world.castRay(new rapier.Ray(origin, direction), GRAB_MAX_DISTANCE, true)
       const body = hit?.collider.parent()
-      if (!hit || !body || !body.isDynamic()) return
+      if (!hit || !body || !body.isDynamic()) return null
+      tmp.current.copy(origin).addScaledVector(direction, hit.timeOfImpact) // hit point in world space
+      return body
+    }
 
-      // hit point in world space
-      tmp.current.copy(origin).addScaledVector(direction, hit.timeOfImpact)
+    /** Pin the block under these client coords to a cursor-following anchor.
+     *  Returns whether a grab actually started. */
+    const beginGrab = (x: number, y: number) => {
+      const body = pickBlock(x, y)
+      if (!body) return false
 
       // The grabbed point expressed in the body's local frame (so the joint
       // anchors exactly where you clicked, letting the block pivot around it).
@@ -142,11 +164,58 @@ export function InputController() {
       plane.current.setFromNormalAndCoplanarPoint(camDir.current, tmp.current)
       target.current.copy(tmp.current)
       if (controls) controls.enabled = false
+      return true
+    }
+
+    const onDown = (e: PointerEvent) => {
+      if (e.button !== 0) return
+      audioManager.start() // unlock/resume audio on the first user gesture
+      // A second finger (pinch/orbit) abandons any undecided tap-vs-grab.
+      if (!e.isPrimary) {
+        cancelPending()
+        return
+      }
+      down.current = { x: e.clientX, y: e.clientY, t: performance.now() }
+      startedOnBlock.current = false
+      cancelPending()
+
+      // Shift skips the grab so a click always shoots — even when aiming at a block.
+      if (e.shiftKey) return
+
+      // Touch has no Shift, so a tap on a block could otherwise never shoot. Defer
+      // the decision: a quick tap fires a ball, holding or dragging grabs instead.
+      if (e.pointerType === 'touch') {
+        if (!pickBlock(e.clientX, e.clientY)) return // empty space: orbit/shoot as before
+        pending.current = { x: e.clientX, y: e.clientY }
+        // Keep OrbitControls out of the undecided window — pressing a block never
+        // orbited anyway. A tap re-enables them on release.
+        if (controls) controls.enabled = false
+        holdTimer.current = window.setTimeout(() => {
+          holdTimer.current = null
+          const p = pending.current
+          if (!p) return
+          pending.current = null
+          if (!beginGrab(p.x, p.y) && controls) controls.enabled = true
+        }, TOUCH_HOLD_MS)
+        return
+      }
+
+      if (beginGrab(e.clientX, e.clientY)) startedOnBlock.current = true
     }
 
     const onMove = (e: PointerEvent) => {
+      // Touch: dragging off the press point promotes the pending tap to a grab,
+      // anchored at the original point so the block pivots where you pressed.
+      const p = pending.current
+      if (p) {
+        const moved = Math.hypot(e.clientX - down.current.x, e.clientY - down.current.y)
+        if (moved > DRAG_THRESHOLD) {
+          cancelPending()
+          if (!beginGrab(p.x, p.y) && controls) controls.enabled = true
+        }
+      }
       if (!grabbed.current) return
-      setNdc(e)
+      setNdc(e.clientX, e.clientY)
       raycaster.setFromCamera(ndc.current, camera)
       if (raycaster.ray.intersectPlane(plane.current, tmp.current)) {
         target.current.copy(tmp.current)
@@ -155,16 +224,24 @@ export function InputController() {
 
     const onUp = (e: PointerEvent) => {
       if (e.button !== 0) return
+      const wasPending = pending.current !== null
+      cancelPending()
       if (grabbed.current) {
         release()
         return
       }
-      if (startedOnBlock.current) return
+      // An undecided touch press released this quickly is a tap: fall through and
+      // shoot (this is the case that has no Shift equivalent on touch).
+      if (wasPending) {
+        if (controls) controls.enabled = true
+      } else if (startedOnBlock.current) {
+        return
+      }
 
       const moved = Math.hypot(e.clientX - down.current.x, e.clientY - down.current.y)
       if (moved > DRAG_THRESHOLD || performance.now() - down.current.t > TAP_TIMEOUT) return
 
-      setNdc(e)
+      setNdc(e.clientX, e.clientY)
       raycaster.setFromCamera(ndc.current, camera)
       const dir = raycaster.ray.direction
       const o = camera.position.clone().addScaledVector(dir, SPAWN_OFFSET)
@@ -248,14 +325,22 @@ export function InputController() {
     el.addEventListener('pointerdown', onDown, true)
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
-    window.addEventListener('pointercancel', release)
+    const onCancel = () => {
+      if (pending.current) {
+        cancelPending()
+        if (controls) controls.enabled = true
+      }
+      release()
+    }
+    window.addEventListener('pointercancel', onCancel)
     window.addEventListener('keydown', onKey)
     return () => {
       el.removeEventListener('pointerdown', onDown, true)
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
-      window.removeEventListener('pointercancel', release)
+      window.removeEventListener('pointercancel', onCancel)
       window.removeEventListener('keydown', onKey)
+      cancelPending() // no orphaned hold timer
     }
   }, [camera, gl, raycaster, controls, world, rapier, fire])
 
