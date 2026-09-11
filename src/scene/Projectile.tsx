@@ -46,11 +46,19 @@ export function Projectile({
     <RigidBody
       ref={ref}
       colliders="ball"
-      // Continuous collision detection: physics uses a vary timestep (= frame time),
-      // so a fast ball would otherwise jump past the 0.5m-thick wall between two
-      // discrete checks and never collide — very visible on a phone, whose longer
-      // frames mean longer steps. Only the ball pays the CCD cost, never the bricks.
-      ccd
+      // Soft continuous collision detection. Physics uses a vary timestep (= frame
+      // time), so a fast ball would otherwise jump past the 0.5m-thick wall between
+      // two discrete checks and never collide — very visible on a phone, whose
+      // longer frames mean longer steps.
+      //
+      // Soft CCD (predictive constraints) rather than hard `ccd` (shape-cast +
+      // motion clamping): hard CCD pins the ball at the impact point with its
+      // velocity untouched and only resolves the impulse on the NEXT step, which
+      // on a phone's long frames reads as a visible stop-then-continue stutter.
+      // The prediction distance is how far along its path Rapier may look; it
+      // costs broad-phase work, but only the few live balls carry it — never the
+      // 2000+ bricks — so it is sized for a fast shot on a slow frame.
+      softCcdPrediction={2}
       position={position}
       linearVelocity={velocity}
       density={density}
