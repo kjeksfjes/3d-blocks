@@ -170,7 +170,8 @@ export function InputController() {
     const onDown = (e: PointerEvent) => {
       if (e.button !== 0) return
       audioManager.start() // unlock/resume audio on the first user gesture
-      // A second finger (pinch/orbit) abandons any undecided tap-vs-grab.
+      // A second finger means pinch/zoom, which OrbitControls owns: abandon the
+      // undecided tap-vs-grab and let it through untouched.
       if (!e.isPrimary) {
         cancelPending()
         return
@@ -187,15 +188,16 @@ export function InputController() {
       if (e.pointerType === 'touch') {
         if (!pickBlock(e.clientX, e.clientY)) return // empty space: orbit/shoot as before
         pending.current = { x: e.clientX, y: e.clientY }
-        // Keep OrbitControls out of the undecided window — pressing a block never
-        // orbited anyway. A tap re-enables them on release.
-        if (controls) controls.enabled = false
+        // OrbitControls stays enabled through the undecided window. Disabling it
+        // here would make it miss this pointerdown, so a following second finger
+        // would read as a single pointer (rotate) and pinch-zoom could never
+        // start. beginGrab/release are the only writers of controls.enabled.
         holdTimer.current = window.setTimeout(() => {
           holdTimer.current = null
           const p = pending.current
           if (!p) return
           pending.current = null
-          if (!beginGrab(p.x, p.y) && controls) controls.enabled = true
+          beginGrab(p.x, p.y)
         }, TOUCH_HOLD_MS)
         return
       }
@@ -211,7 +213,7 @@ export function InputController() {
         const moved = Math.hypot(e.clientX - down.current.x, e.clientY - down.current.y)
         if (moved > DRAG_THRESHOLD) {
           cancelPending()
-          if (!beginGrab(p.x, p.y) && controls) controls.enabled = true
+          beginGrab(p.x, p.y)
         }
       }
       if (!grabbed.current) return
@@ -232,11 +234,7 @@ export function InputController() {
       }
       // An undecided touch press released this quickly is a tap: fall through and
       // shoot (this is the case that has no Shift equivalent on touch).
-      if (wasPending) {
-        if (controls) controls.enabled = true
-      } else if (startedOnBlock.current) {
-        return
-      }
+      if (!wasPending && startedOnBlock.current) return
 
       const moved = Math.hypot(e.clientX - down.current.x, e.clientY - down.current.y)
       if (moved > DRAG_THRESHOLD || performance.now() - down.current.t > TAP_TIMEOUT) return
@@ -326,10 +324,7 @@ export function InputController() {
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
     const onCancel = () => {
-      if (pending.current) {
-        cancelPending()
-        if (controls) controls.enabled = true
-      }
+      cancelPending()
       release()
     }
     window.addEventListener('pointercancel', onCancel)
