@@ -341,6 +341,12 @@ const IDENTITY_ROT = { x: 0, y: 0, z: 0, w: 1 }
  * the joint frames are identity and only the centre offset is needed. The joints are
  * removed on unmount; remounting (reset) rebuilds them.
  */
+// How far a pillar weld may drift from its rest offset before it tears. Rapier exposes
+// no joint-impulse readback, but a fixed joint under load is visibly violated by the
+// solver, so this drift stands in for the force the weld is carrying. Tuned by feel:
+// bricks hold through ordinary knocks and let go when a collapse really leans on them.
+const WELD_BREAK_STRAIN = 0.05
+
 function Welds({
   groupRefs,
   pairs,
@@ -349,35 +355,69 @@ function Welds({
   pairs: [BodyLocation, BodyLocation][]
 }) {
   const { world, rapier } = useRapier()
-  const doneRef = useRef(false)
-  const jointsRef = useRef<ReturnType<typeof world.createImpulseJoint>[]>([])
+  type Joint = ReturnType<typeof world.createImpulseJoint>
+  // `rest` is body2's origin expressed in body1's local frame at spawn. Comparing it
+  // with the live offset each frame gives how far the solver is failing to satisfy the
+  // joint, which stands in for the force the weld is carrying (Rapier exposes no joint
+  // impulse readback here).
+  type Weld = { joint: Joint; b1: RapierRigidBody; b2: RapierRigidBody; rest: Vector3; cut: boolean }
+
+  const weldsRef = useRef<Weld[] | null>(null)
+
+  // Scratch, reused per frame so the strain check allocates nothing.
+  const q = useRef(new Quaternion())
+  const off = useRef(new Vector3())
 
   const bodyAt = (loc: BodyLocation) => groupRefs[loc.groupIndex]?.current?.[loc.indexInGroup] ?? null
 
   useFrame(() => {
-    if (doneRef.current) return
-    if (!pairs.every(([a, b]) => bodyAt(a) && bodyAt(b))) return
-    for (const [a, b] of pairs) {
-      const b1 = bodyAt(a)!
-      const b2 = bodyAt(b)!
-      const p1 = b1.translation()
-      const p2 = b2.translation()
-      const data = rapier.JointData.fixed(
-        { x: p2.x - p1.x, y: p2.y - p1.y, z: p2.z - p1.z },
-        IDENTITY_ROT,
-        { x: 0, y: 0, z: 0 },
-        IDENTITY_ROT,
-      )
-      // wakeUp=false: keep the structure asleep on spawn.
-      jointsRef.current.push(world.createImpulseJoint(data, b1, b2, false))
+    // Create the welds once every body exists.
+    if (!weldsRef.current) {
+      if (!pairs.every(([a, b]) => bodyAt(a) && bodyAt(b))) return
+      const list: Weld[] = []
+      for (const [a, b] of pairs) {
+        const b1 = bodyAt(a)!
+        const b2 = bodyAt(b)!
+        const p1 = b1.translation()
+        const p2 = b2.translation()
+        const data = rapier.JointData.fixed(
+          { x: p2.x - p1.x, y: p2.y - p1.y, z: p2.z - p1.z },
+          IDENTITY_ROT,
+          { x: 0, y: 0, z: 0 },
+          IDENTITY_ROT,
+        )
+        list.push({
+          // wakeUp=false: keep the structure asleep on spawn.
+          joint: world.createImpulseJoint(data, b1, b2, false),
+          b1,
+          b2,
+          // Bodies spawn axis-aligned, so the local rest offset is the world delta.
+          rest: new Vector3(p2.x - p1.x, p2.y - p1.y, p2.z - p1.z),
+          cut: false,
+        })
+      }
+      weldsRef.current = list
+      return
     }
-    doneRef.current = true
+
+    // Tear any weld strained past the limit: it is carrying more than it can hold.
+    for (const w of weldsRef.current) {
+      if (w.cut) continue
+      const p1 = w.b1.translation()
+      const p2 = w.b2.translation()
+      const r1 = w.b1.rotation()
+      q.current.set(r1.x, r1.y, r1.z, r1.w).invert()
+      off.current.set(p2.x - p1.x, p2.y - p1.y, p2.z - p1.z).applyQuaternion(q.current)
+      if (off.current.distanceTo(w.rest) <= WELD_BREAK_STRAIN) continue
+      world.removeImpulseJoint(w.joint, true)
+      w.cut = true
+    }
   })
 
   useEffect(
     () => () => {
-      for (const j of jointsRef.current) world.removeImpulseJoint(j, false)
-      jointsRef.current = []
+      for (const w of weldsRef.current ?? []) if (!w.cut) world.removeImpulseJoint(w.joint, false)
+      weldsRef.current = null
     },
     [world],
   )

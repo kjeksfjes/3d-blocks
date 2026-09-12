@@ -7,9 +7,11 @@ const ROWS = 24
 const BASE = '#b56b4a' // brick; per-block variation is added by the renderer
 
 // A sturdy concrete pillar flanking each end: one solid, heavy block standing flush
-// beside the wall, with each course's end brick welded to it (see `welds`) so the
-// pillars anchor the wall and resist toppling. CONCRETE_GAP sits the pillar face flush
-// with the outermost brick edge without overlapping at spawn.
+// beside the wall, with each course's half-brick notch filler welded to it (see
+// `welds`) so the pillars anchor the wall and resist toppling. Full bricks are left
+// unwelded so they can fall free instead of riding a toppling pillar down.
+// CONCRETE_GAP sits the pillar face flush with the outermost brick edge without
+// overlapping at spawn.
 const CONCRETE = '#8f8f8f'
 const PILLAR_W = 0.9 // width across the wall (x)
 const PILLAR_D = 1.2 // depth (z) — deeper than the wall for a stable buttress foot
@@ -48,12 +50,6 @@ function layout(pillars: boolean): { blocks: InstanceSpec[]; welds: [number, num
   blocks.push({ position: [pillarCx(leftEdge, -1), wallHeight / 2, 0], size: pillar, color: CONCRETE })
   const rightPillar = blocks.length
   blocks.push({ position: [pillarCx(rightEdge, 1), wallHeight / 2, 0], size: pillar, color: CONCRETE })
-
-  // Weld each course's outermost full brick to the pillar on that side.
-  for (let r = 0; r < ROWS; r++) {
-    welds.push([r * COLS, leftPillar]) // leftmost brick
-    welds.push([r * COLS + (COLS - 1), rightPillar]) // rightmost brick
-  }
 
   // Half-brick fillers for the notches: odd courses are recessed on the left, even
   // courses on the right. Each filler sits flush in the notch and is welded to its
