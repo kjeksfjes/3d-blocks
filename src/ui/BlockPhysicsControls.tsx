@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react'
-import { button, useControls } from 'leva'
+import { useControls } from 'leva'
 import { templateLivePhysics, useStore, type LivePhysics } from '../state/store'
 import { templateMap } from '../templates'
 import type { TemplateSpec } from '../templates/types'
+import { useResetDefaults } from './resetDefaults'
 
 /** "Block physics" panel. Per scene: seeds from the remembered session values or the
- *  template's defaults, applies live, and offers a reset-to-defaults button. Keyed by
+ *  template's defaults, and applies live. Reset is handled by the panel-wide "Reset to
+ *  defaults" button (see ResetDefaults). Keyed by
  *  template id, and the folder name carries the scene name so leva keeps each scene's
  *  controls independent (it keys state by the control path, not by React identity). */
 export function BlockPhysicsControls() {
@@ -29,11 +31,11 @@ function Inner({ template }: { template: TemplateSpec }) {
       restitution: { value: initial.restitution, min: 0, max: 1, step: 0.05 },
       linearDamping: { value: initial.linearDamping, min: 0, max: 5, step: 0.05 },
       angularDamping: { value: initial.angularDamping, min: 0, max: 5, step: 0.05 },
-      'Reset to defaults': button(() => setRef.current?.(defaults)),
     }),
     { order: 10 },
   )
   setRef.current = set
+  useResetDefaults('blockPhysics', () => setRef.current?.(defaults))
 
   useEffect(() => {
     setSceneLivePhysics(template.id, {

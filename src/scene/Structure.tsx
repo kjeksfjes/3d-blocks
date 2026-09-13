@@ -7,7 +7,7 @@ import {
   type RapierRigidBody,
 } from '@react-three/rapier'
 import { Color, Euler, Quaternion, Vector3, type InstancedMesh } from 'three'
-import type { InstanceSpec, SpawnMode, TemplateSpec, Vec3 } from '../templates/types'
+import type { InstanceSpec, SceneOptions, SpawnMode, TemplateSpec, Vec3 } from '../templates/types'
 import { templateLivePhysics, useStore, type DestructionMode, type LivePhysics } from '../state/store'
 
 const ZERO = { x: 0, y: 0, z: 0 }
@@ -272,16 +272,16 @@ interface BodyLocation {
 
 export function Structure({
   template,
-  toggles,
+  options,
   mode = 'loose',
 }: {
   template: TemplateSpec
-  toggles?: Record<string, boolean>
+  options?: SceneOptions
   mode?: DestructionMode
 }) {
   const staticMode = mode === 'static'
   const welded = mode === 'welded'
-  const specs = useMemo(() => template.build(toggles), [template, toggles])
+  const specs = useMemo(() => template.build(options), [template, options])
   const groups = useMemo(() => groupBySize(specs), [specs])
   const spawnMode = template.spawn ?? 'pinned'
 
@@ -297,7 +297,7 @@ export function Structure({
 
   // Translate the template's build-order weld pairs into (group, offset) locations.
   const weldPairs = useMemo<[BodyLocation, BodyLocation][]>(() => {
-    const raw = template.welds?.(toggles) ?? []
+    const raw = template.welds?.(options) ?? []
     if (raw.length === 0) return []
     const sizeKeyToGroup = new Map(groups.map((g, gi) => [g.size.join('x'), gi]))
     const counters = new Map<number, number>()
@@ -308,7 +308,7 @@ export function Structure({
       return { groupIndex, indexInGroup }
     })
     return raw.map(([a, b]) => [locations[a], locations[b]])
-  }, [template, toggles, specs, groups])
+  }, [template, options, specs, groups])
 
   return (
     <>

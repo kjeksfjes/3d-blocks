@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { defaultTemplateId } from '../templates'
-import type { TemplateSpec, Vec3 } from '../templates/types'
+import type { SceneOptions, TemplateSpec, Vec3 } from '../templates/types'
 
 /** Max live projectiles; oldest are culled so they can't accumulate unbounded. */
 const MAX_PROJECTILES = 15
@@ -93,8 +93,8 @@ interface AppState {
   awakeBodies: number
   /** Live per-body physics, remembered per scene (keyed by template id) for the session. */
   livePhysicsByScene: Record<string, LivePhysics>
-  /** Current values of the active scene's on/off toggles (keyed by toggle key). */
-  sceneToggles: Record<string, boolean>
+  /** Current values of the active scene's options (keyed by toggle/slider key). */
+  sceneOptions: SceneOptions
   /** How structures come apart when hit (see DestructionMode). */
   destructionMode: DestructionMode
   /** The latest projectile impact (consumed by the static/welded modes); null if none. */
@@ -106,7 +106,7 @@ interface AppState {
   setColor: (mode: ColorMode, variation: number) => void
   setAwakeBodies: (n: number) => void
   setSceneLivePhysics: (templateId: string, value: LivePhysics) => void
-  setSceneToggles: (next: Record<string, boolean>) => void
+  setSceneOptions: (next: SceneOptions) => void
   setDestructionMode: (mode: DestructionMode) => void
   registerImpact: (position: Vec3, velocity: Vec3) => void
 }
@@ -122,7 +122,7 @@ export const useStore = create<AppState>((set) => ({
   colorVariation: 0.5,
   awakeBodies: 0,
   livePhysicsByScene: {},
-  sceneToggles: {},
+  sceneOptions: {},
   destructionMode: 'loose',
   lastImpact: null,
   setTemplate: (id) => set({ activeTemplateId: id, resetNonce: 0, projectiles: [] }),
@@ -145,7 +145,7 @@ export const useStore = create<AppState>((set) => ({
   setAwakeBodies: (n) => set({ awakeBodies: n }),
   setSceneLivePhysics: (templateId, value) =>
     set((s) => ({ livePhysicsByScene: { ...s.livePhysicsByScene, [templateId]: value } })),
-  setSceneToggles: (next) => set({ sceneToggles: next }),
+  setSceneOptions: (next) => set({ sceneOptions: next }),
   setDestructionMode: (mode) => set({ destructionMode: mode }),
   registerImpact: (position, velocity) =>
     set((s) => ({ lastImpact: { id: (s.lastImpact?.id ?? 0) + 1, position, velocity } })),

@@ -41,6 +41,20 @@ export interface TemplateToggle {
   default: boolean
 }
 
+/** A numeric scene option, rendered as a slider in the "Scene" panel. Committed on
+ *  release rather than per drag step, since each change rebuilds the whole structure. */
+export interface TemplateSlider {
+  key: string
+  label: string
+  default: number
+  min: number
+  max: number
+  step?: number
+}
+
+/** Current values of a template's scene options, keyed by toggle/slider key. */
+export type SceneOptions = Record<string, boolean | number>
+
 export interface TemplateSpec {
   id: string
   name: string
@@ -49,14 +63,16 @@ export interface TemplateSpec {
   physics?: TemplatePhysics
   /** Scene-specific on/off options shown in the "Scene" panel; passed to build()/welds(). */
   toggles?: TemplateToggle[]
+  /** Scene-specific numeric options shown as sliders in the "Scene" panel. */
+  sliders?: TemplateSlider[]
   /** Pure function returning the block instances. Called fresh on each (re)mount. */
-  build: (toggles?: Record<string, boolean>) => InstanceSpec[]
+  build: (options?: SceneOptions) => InstanceSpec[]
   /**
    * Optional rigid welds, as pairs of `build()`-order indices. Each pair is joined by
    * a fixed joint that locks the two blocks' current relative pose, so they move as one
    * rigid assembly (e.g. anchoring a wall's end courses to its concrete pillars).
-   * Assumes both blocks are axis-aligned (unrotated) at spawn. Receives the same toggles
+   * Assumes both blocks are axis-aligned (unrotated) at spawn. Receives the same options
    * as build() so the indices stay consistent.
    */
-  welds?: (toggles?: Record<string, boolean>) => [number, number][]
+  welds?: (options?: SceneOptions) => [number, number][]
 }

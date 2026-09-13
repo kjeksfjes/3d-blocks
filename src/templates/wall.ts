@@ -1,8 +1,12 @@
-import type { InstanceSpec, TemplateSpec, Vec3 } from './types'
+import type { InstanceSpec, SceneOptions, TemplateSpec, Vec3 } from './types'
 
 const BRICK: Vec3 = [0.5, 0.25, 0.5]
 const COLS = 36
 const ROWS = 24
+// Slider bounds. The upper ends are perf limits, not structural ones: cols * rows is
+// the rigid-body count, and the frame rate has to stay high for welds to hold.
+const MAX_COLS = 64
+const MAX_ROWS = 100
 
 const BASE = '#b56b4a' // brick; per-block variation is added by the renderer
 
@@ -22,17 +26,21 @@ const CONCRETE_GAP = 0
  * sync. Produces, in order: field bricks (row-major), the two pillars, then the
  * half-brick notch fillers. `welds` holds build-order index pairs.
  */
-function layout(pillars: boolean): { blocks: InstanceSpec[]; welds: [number, number][] } {
+function layout(
+  pillars: boolean,
+  cols: number,
+  rows: number,
+): { blocks: InstanceSpec[]; welds: [number, number][] } {
   const [bw, bh] = BRICK
-  const x0 = -(COLS * bw) / 2 + bw / 2
+  const x0 = -(cols * bw) / 2 + bw / 2
   const blocks: InstanceSpec[] = []
   const welds: [number, number][] = []
 
   // Field bricks. Running bond: shift every other course by half a brick, which leaves
   // a half-brick notch at one end of each course (the toothed ends).
-  for (let r = 0; r < ROWS; r++) {
+  for (let r = 0; r < rows; r++) {
     const offset = r % 2 === 0 ? 0 : bw / 2
-    for (let c = 0; c < COLS; c++) {
+    for (let c = 0; c < cols; c++) {
       blocks.push({ position: [x0 + c * bw + offset, bh / 2 + r * bh, 0], size: BRICK, color: BASE })
     }
   }
@@ -42,8 +50,8 @@ function layout(pillars: boolean): { blocks: InstanceSpec[]; welds: [number, num
 
   // Pillars flank each end, flush with the outermost brick edge.
   const leftEdge = x0 - bw / 2 // even courses reach here on the left
-  const rightEdge = x0 + COLS * bw // odd courses reach here on the right
-  const wallHeight = ROWS * bh
+  const rightEdge = x0 + cols * bw // odd courses reach here on the right
+  const wallHeight = rows * bh
   const pillar: Vec3 = [PILLAR_W, wallHeight, PILLAR_D]
   const pillarCx = (edge: number, side: 1 | -1) => edge + side * (CONCRETE_GAP + PILLAR_W / 2)
   const leftPillar = blocks.length
@@ -55,7 +63,7 @@ function layout(pillars: boolean): { blocks: InstanceSpec[]; welds: [number, num
   // courses on the right. Each filler sits flush in the notch and is welded to its
   // pillar so it stays part of the anchored end.
   const half: Vec3 = [bw / 2, bh, BRICK[2]]
-  for (let r = 0; r < ROWS; r++) {
+  for (let r = 0; r < rows; r++) {
     const y = bh / 2 + r * bh
     const onLeft = r % 2 === 1
     const cx = onLeft ? leftEdge + bw / 4 : rightEdge - bw / 4
@@ -67,7 +75,13 @@ function layout(pillars: boolean): { blocks: InstanceSpec[]; welds: [number, num
   return { blocks, welds }
 }
 
-const hasPillars = (toggles?: Record<string, boolean>) => toggles?.pillars ?? true
+/** Resolves the scene options to layout arguments, falling back to the defaults. */
+function args(options?: SceneOptions): [boolean, number, number] {
+  const pillars = (options?.pillars as boolean | undefined) ?? true
+  const cols = (options?.cols as number | undefined) ?? COLS
+  const rows = (options?.rows as number | undefined) ?? ROWS
+  return [pillars, cols, rows]
+}
 
 export const wall: TemplateSpec = {
   id: 'wall',
@@ -75,6 +89,10 @@ export const wall: TemplateSpec = {
   // Solid feel: grippy, no bounce, damping to settle quickly without micro-jitter.
   physics: { friction: 1.45, restitution: 0, linearDamping: 1, angularDamping: 0.2 },
   toggles: [{ key: 'pillars', label: 'Pillars', default: true }],
-  build: (toggles) => layout(hasPillars(toggles)).blocks,
-  welds: (toggles) => layout(hasPillars(toggles)).welds,
+  sliders: [
+    { key: 'cols', label: 'Width (bricks)', default: COLS, min: 2, max: MAX_COLS, step: 1 },
+    { key: 'rows', label: 'Height (courses)', default: ROWS, min: 1, max: MAX_ROWS, step: 1 },
+  ],
+  build: (options) => layout(...args(options)).blocks,
+  welds: (options) => layout(...args(options)).welds,
 }
